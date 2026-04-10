@@ -15,11 +15,12 @@ def register():
     password = data.get('password')
     email = data.get('email')
 
-    # 模拟密码长度校验
-    if not password or len(password) < 6:
+    # 优先判断空密码
+    if not password:
+        return jsonify({"code": 400, "message": "密码不能为空"}), 400
+    if len(password) < 6:
         return jsonify({"code": 400, "message": "密码长度不能少于6位"}), 400
 
-    # 模拟用户名已存在
     if username in [u['username'] for u in users_db.values()]:
         return jsonify({"code": 400, "message": "用户名已存在"}), 400
 
@@ -111,4 +112,4 @@ def logout():
 
 if __name__ == '__main__':
     # 允许外部访问，监听 5000 端口
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, threaded=True)
