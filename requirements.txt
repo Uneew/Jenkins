@@ -6,3 +6,4 @@ pytest-html==4.1.1
 openpyxl==3.1.2
 python-dotenv==1.0.0
 faker 
+waitress==3.0.0

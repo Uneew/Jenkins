@@ -111,5 +111,6 @@ def logout():
     return jsonify({"code": 0, "message": "success"})
 
 if __name__ == '__main__':
-    # 允许外部访问，监听 5000 端口
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    from waitress import serve
+    print("Starting Waitress server on http://0.0.0.0:5000")
+    serve(app, host='0.0.0.0', port=5000, threads=4)
