@@ -20,7 +20,7 @@ def run_tests():
     exit_code = pytest.main(args)
 
     # 生成Allure HTML报告
-    os.system("allure generate ./reports/allure-results -o ./reports/allure-report --clean")
+    
 
     return exit_code
 
