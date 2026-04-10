@@ -15,12 +15,12 @@ def register():
     password = data.get('password')
     email = data.get('email')
 
-    # 优先判断空密码
     if not password:
         return jsonify({"code": 400, "message": "密码不能为空"}), 400
     if len(password) < 6:
         return jsonify({"code": 400, "message": "密码长度不能少于6位"}), 400
 
+    # 检查用户名是否已存在
     if username in [u['username'] for u in users_db.values()]:
         return jsonify({"code": 400, "message": "用户名已存在"}), 400
 
