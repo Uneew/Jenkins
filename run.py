@@ -3,7 +3,7 @@ import pytest
 
 
 def run_all_tests():
-    print("🚀 开始执行自动化测试用例...")
+    print(" 开始执行自动化测试用例...")
 
     # 1. 相当于在命令行输入 pytest -vs --alluredir=./reports/allure-results --clean-alluredir
     # 注意：这里的列表参数就是命令行的参数
