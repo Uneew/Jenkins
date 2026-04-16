@@ -14,7 +14,7 @@ def run_all_tests():
         "--clean-alluredir"  # 每次运行前清空旧数据
     ])
 
-    print("✅ 测试执行完毕，正在启动 Allure 报告服务...")
+    print(" 测试执行完毕，正在启动 Allure 报告服务...")
 
     # 2. 相当于在命令行输入 allure serve ...
     # 这句话会自动帮你把 json 数据转成 html，并自动在浏览器打开
