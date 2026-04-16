@@ -4,64 +4,68 @@ import pytest
 import subprocess
 import time
 import sys
-import signal
+
+
+def kill_port_5000():
+    """强杀 Mock Server 占用的 5000 端口"""
+    if sys.platform == 'win32':
+        # 增加 /T 确保杀掉整个进程树
+        os.system(
+            'FOR /F "tokens=5" %P IN (\'netstat -ano ^| findstr :5000 ^| findstr LISTENING\') DO taskkill /F /T /PID %P >nul 2>&1')
 
 
 def run_all_tests():
-    # 1. 环境变量与路径准备
+    # --- 1. 基础配置 ---
     results_dir = "reports/allure-results"
     mock_script = "mock_server.py"
-    python_exe = sys.executable  # 获取当前使用的 Python 解释器路径
-
-    # 强制设置输出编码为 UTF-8，解决控制台乱码
-    if sys.platform.startswith('win'):
-        import io
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
-    # 2. 自动判断环境并启动 Mock Server
-    # 在本地运行时自动启动，Jenkins 运行则跳过（因为 Jenkins Pipeline 里已经写了启动逻辑）
+    python_exe = sys.executable
     is_jenkins = os.getenv('JENKINS_URL') is not None
-    mock_process = None
 
+    # --- 2. 环境初始化 (仅本地) ---
     if not is_jenkins:
-        print(" 检测到本地运行，正在启动 Mock Server...")
-        # 使用 CREATE_NEW_PROCESS_GROUP 标志，方便后续彻底杀掉进程树
+        print(" 正在清理旧的进程与缓存...")
+        kill_port_5000()
+
+        print(" 正在异步启动 Mock Server...")
         try:
-            mock_process = subprocess.Popen(
+            # 使用 DETACHED_PROCESS 标志，让 Mock 完全脱离 run.py 独立运行
+            # 这样即便点击 PyCharm 的停止按钮，也不会因为子进程未关闭而卡死
+            subprocess.Popen(
                 [python_exe, mock_script],
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == 'win32' else 0,
+                creationflags=0x00000008 if sys.platform == 'win32' else 0,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
-            time.sleep(2)  # 等待 Flask 启动
-            print("Mock Server 已在后台运行 (Port: 5000)")
+            time.sleep(2)
+            print(" Mock Server 已启动 (Port: 5000)")
         except Exception as e:
             print(f" 启动 Mock Server 失败: {e}")
 
-    # 3. 执行测试
+    # --- 3. 执行测试 ---
     print(" 开始执行自动化测试用例...")
+    # 增加 --clean-alluredir 确保每次报告都是最新的
     pytest.main(['-s', '-v', f'--alluredir={results_dir}', '--clean-alluredir'])
 
-    # 4. 清理工作
-    if not is_jenkins and mock_process:
-        print(" 正在清理本地 Mock Server 进程...")
-        try:
-            # 暴力清理 5000 端口，确保不会残留
-            if sys.platform == 'win32':
-                os.system(
-                    'FOR /F "tokens=5" %P IN (\'netstat -ano ^| findstr :5000 ^| findstr LISTENING\') DO taskkill /F /PID %P >nul 2>&1')
-            else:
-                mock_process.terminate()
-            print(" 清理完毕。")
-        except Exception as e:
-            print(f" 清理进程时出错: {e}")
+    # --- 4. 清理与报告 (仅本地) ---
+    if not is_jenkins:
+        print(" 测试结束，正在关闭本地 Mock Server...")
+        kill_port_5000()
 
-    # 5. 生成报告
-    if is_jenkins:
-        print("CI 环境：跳过 Allure serve，请在 Jenkins 页面查看报告。")
+        print(" 正在启动 Allure 报告服务...")
+        print(" 提示：报告服务在独立进程运行，你可以点击 PyCharm 的停止按钮关闭本次运行。")
+
+        # 【关键修改】使用 Popen 异步启动 allure，不阻塞主进程
+        # 这样 run.py 就能正常结束，PyCharm 按钮会变绿
+        try:
+            subprocess.Popen(
+                ['allure', 'serve', results_dir],
+                shell=True,
+                creationflags=0x00000008 if sys.platform == 'win32' else 0
+            )
+        except Exception as e:
+            print(f" 无法启动 Allure 报告: {e}")
     else:
-        print("本地环境：准备生成并打开 Allure 报告...")
-        os.system(f'allure serve {results_dir}')
+        print(" CI 环境：已完成测试数据收集，请在 Jenkins 插件中查看报告。")
 
 
 if __name__ == "__main__":
